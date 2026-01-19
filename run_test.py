@@ -63,7 +63,7 @@ def main():
         # Initialize app
         print("\n[1/2] Initializing application...")
         print("  (This may take a few minutes on first run - downloading models)")
-        app = MentalHealthScreeningApp(load_classifiers=False)
+        app = MentalHealthScreeningApp(load_classifiers=True)
         
         # Process call
         print("\n[2/2] Processing call...")

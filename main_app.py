@@ -182,7 +182,8 @@ class MentalHealthScreeningApp:
                 call_timestamp=call_timestamp,
                 transcript=transcript,
                 scores=scores,
-                risk_assessment=risk_assessment
+                risk_assessment=risk_assessment,
+                prosody_features=prosody_features
             )
             
             self.database.add_report(

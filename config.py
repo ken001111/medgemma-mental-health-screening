@@ -5,6 +5,8 @@ import os
 
 # Model Configuration
 MEDASR_ID = "google/medasr"  # Medical ASR model
+# Use MedASR's own processor config to match model inputs.
+MEDASR_PROCESSOR_ID = MEDASR_ID
 
 # MedGemma Configuration
 # Options: "google/medgemma-2-27b-it" (27B) or "google/medgemma-2-4b-it" (4B)

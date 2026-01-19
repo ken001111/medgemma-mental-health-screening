@@ -5,9 +5,9 @@ Uses Google Health AI models for medical speech recognition and analysis.
 import torch
 import soundfile as sf
 import numpy as np
-from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
+from transformers import AutoConfig, AutoProcessor, AutoModelForCTC, AutoModelForSpeechSeq2Seq
 from typing import Dict, Tuple, Optional
-from config import MEDASR_ID, MAX_NEW_TOKENS, SR
+from config import MEDASR_ID, MEDASR_PROCESSOR_ID, MAX_NEW_TOKENS, SR
 from audio_processor import extract_prosody_features, load_audio
 from medgemma_analyzer import MedGemmaAnalyzer, create_medgemma_analyzer
 
@@ -25,17 +25,32 @@ class MultimodalAnalyzer:
             device: Device to use ('cuda' or 'cpu'). Auto-detects if None.
             use_medgemma: Whether to initialize MedGemma for text analysis
         """
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        if device:
+            self.device = device
+        elif torch.cuda.is_available():
+            self.device = "cuda"
+        elif torch.backends.mps.is_available():
+            self.device = "mps"
+        else:
+            self.device = "cpu"
         
         print(f"Loading MedASR model on {self.device}...")
-        self.processor = AutoProcessor.from_pretrained(MEDASR_ID)
-        self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            MEDASR_ID,
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-            device_map="auto",
-        )
+        self.processor = AutoProcessor.from_pretrained(MEDASR_PROCESSOR_ID)
+        self.asr_config = AutoConfig.from_pretrained(MEDASR_ID)
+        dtype = torch.float16 if self.device == "cuda" else torch.float32
+        if self.asr_config.model_type == "lasr_ctc":
+            self.model = AutoModelForCTC.from_pretrained(
+                MEDASR_ID,
+                torch_dtype=dtype,
+            )
+        else:
+            self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
+                MEDASR_ID,
+                torch_dtype=dtype,
+            )
+        self.model.to(self.device)
         self.model.eval()
-        print("MedASR model loaded successfully.")
+        print(f"ASR model loaded successfully: {MEDASR_ID}")
         
         # Initialize MedGemma for medical text analysis
         self.medgemma = None
@@ -61,15 +76,19 @@ class MultimodalAnalyzer:
         try:
             audio, sr = load_audio(wav_path)
             inputs = self.processor(audio, sampling_rate=sr, return_tensors="pt").to(self.device)
-            
-            out = self.model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=False,
-                num_beams=1,
-            )
-            
-            transcript = self.processor.batch_decode(out, skip_special_tokens=True)[0]
+
+            if getattr(self.asr_config, "model_type", "") == "lasr_ctc":
+                logits = self.model(**inputs).logits
+                pred_ids = torch.argmax(logits, dim=-1)
+                transcript = self.processor.batch_decode(pred_ids, skip_special_tokens=True)[0]
+            else:
+                out = self.model.generate(
+                    **inputs,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=False,
+                    num_beams=1,
+                )
+                transcript = self.processor.batch_decode(out, skip_special_tokens=True)[0]
             return transcript
         
         except Exception as e:

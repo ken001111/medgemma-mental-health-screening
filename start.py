@@ -20,12 +20,7 @@ from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
 import soundfile as sf
 
 # ---- Config ----
-MEDASR_ID = "google/medasr"  # MedASR model card: HAI-DEF + HF
-SR = 16000
-SEED = 42
-
-# For ~2-minute clips, 256 tokens often truncates transcripts.
-MAX_NEW_TOKENS = 768
+from config import MEDASR_ID, MEDASR_PROCESSOR_ID, SR, SEED, MAX_NEW_TOKENS
 
 # Cache file for transcripts (id -> transcript). This is written by the script.
 TRANSCRIPT_CACHE_CSV = os.path.join("artifacts", "transcripts_cache.csv")
@@ -66,7 +61,7 @@ def main():
     df["label"] = (df["phq9_total"] >= 10).astype(int)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    processor = AutoProcessor.from_pretrained(MEDASR_ID)
+    processor = AutoProcessor.from_pretrained(MEDASR_PROCESSOR_ID)
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         MEDASR_ID,
         torch_dtype=torch.float16 if device == "cuda" else torch.float32,

@@ -33,7 +33,8 @@ class ReportGenerator:
     
     def generate_report(self, call_id: str, soldier_id: str, call_timestamp: datetime,
                        transcript: str, scores: Dict[str, float],
-                       risk_assessment: Dict[str, any]) -> Dict[str, str]:
+                       risk_assessment: Dict[str, any],
+                       prosody_features: Optional[Dict[str, float]] = None) -> Dict[str, str]:
         """
         Generate a medical report for a screening call.
         
@@ -51,7 +52,7 @@ class ReportGenerator:
         # Format report content
         report_content = self._format_report(
             call_id, soldier_id, call_timestamp,
-            transcript, scores, risk_assessment
+            transcript, scores, risk_assessment, prosody_features
         )
         
         # Save report to file
@@ -68,7 +69,8 @@ class ReportGenerator:
     
     def _format_report(self, call_id: str, soldier_id: str, call_timestamp: datetime,
                       transcript: str, scores: Dict[str, float],
-                      risk_assessment: Dict[str, any]) -> str:
+                      risk_assessment: Dict[str, any],
+                      prosody_features: Optional[Dict[str, float]] = None) -> str:
         """Format the report content."""
         
         # Format scores section
@@ -107,6 +109,32 @@ class ReportGenerator:
         transcript_section += "=" * 50 + "\n"
         transcript_section += transcript if transcript else "[No transcript available]\n"
         transcript_section += "\n"
+
+        # Format prosody section
+        prosody_section = "PROSODY FEATURES:\n"
+        prosody_section += "=" * 50 + "\n"
+        if prosody_features:
+            duration = prosody_features.get("duration", 0.0)
+            mean_pitch = prosody_features.get("mean_pitch", 0.0)
+            pitch_std = prosody_features.get("pitch_std", 0.0)
+            speaking_rate = prosody_features.get("speaking_rate", 0.0)
+            mean_energy = prosody_features.get("mean_energy", 0.0)
+            energy_std = prosody_features.get("energy_std", 0.0)
+            silence_ratio = prosody_features.get("silence_ratio", 0.0)
+            mean_spectral_centroid = prosody_features.get("mean_spectral_centroid", 0.0)
+            jitter = prosody_features.get("jitter", 0.0)
+            prosody_section += f"Duration: {duration:.2f} sec\n"
+            prosody_section += f"Mean Pitch: {mean_pitch:.2f} Hz\n"
+            prosody_section += f"Pitch Std: {pitch_std:.2f} Hz\n"
+            prosody_section += f"Speaking Rate (ZCR proxy): {speaking_rate:.2f}\n"
+            prosody_section += f"Mean Energy: {mean_energy:.4f}\n"
+            prosody_section += f"Energy Std: {energy_std:.4f}\n"
+            prosody_section += f"Silence Ratio: {silence_ratio:.2%}\n"
+            prosody_section += f"Mean Spectral Centroid: {mean_spectral_centroid:.2f}\n"
+            prosody_section += f"Jitter (proxy): {jitter:.4f}\n"
+        else:
+            prosody_section += "[No prosody features available]\n"
+        prosody_section += "\n"
         
         # Add MedGemma clinical analysis if available
         medgemma_section = ""
@@ -154,6 +182,7 @@ Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 {scores_section}
 {risk_section}
+{prosody_section}
 {medgemma_section}
 {transcript_section}
 
