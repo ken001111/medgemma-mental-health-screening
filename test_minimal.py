@@ -4,7 +4,14 @@ import os
 import sys
 
 print("Testing installation...")
-print("="*60)
+print("=" * 60)
+print(f"Python executable: {sys.executable}")
+print(f"Python version: {sys.version.split()[0]}")
+print(f"sys.prefix: {sys.prefix}")
+print(f"base_prefix: {getattr(sys, 'base_prefix', '')}")
+in_venv = getattr(sys, "base_prefix", sys.prefix) != sys.prefix
+print(f"In virtualenv: {in_venv}")
+print("-" * 60)
 
 # Test imports
 try:
@@ -14,8 +21,13 @@ try:
     print(f"  CUDA available: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
         print(f"  CUDA device: {torch.cuda.get_device_name(0)}")
-except ImportError:
-    print("✗ PyTorch not installed")
+except Exception as e:
+    print("✗ PyTorch import failed")
+    print(f"  Error: {type(e).__name__}: {e}")
+    print("")
+    print("Common fix on zsh: your `python` may be aliased to a system/Homebrew Python.")
+    print("Run the venv interpreter explicitly:")
+    print('  .venv/bin/python -c "import torch; print(torch.__version__)"')
     sys.exit(1)
 
 try:

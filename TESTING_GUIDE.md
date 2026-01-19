@@ -69,6 +69,25 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### Step 2.5 (macOS/zsh): Ensure you're using the venv Python
+
+If your shell has a `python` alias, it can override the venv and cause errors like `No module named 'torch'`.
+
+Run:
+
+```bash
+which python
+python -V
+python -c "import sys; print(sys.executable)"
+```
+
+If `sys.executable` is **not** inside your venv folder, run Python explicitly:
+
+```bash
+.venv/bin/python test_minimal.py
+.venv/bin/python run_test.py your_audio_file.wav
+```
+
 ### Step 3: Verify ffmpeg Installation
 
 ```bash
