@@ -1,0 +1,15 @@
+Brief Description (for GitHub "About" section):
+
+Multimodal mental health screening system using MedASR & MedGemma for PHQ-9, anxiety, and PTSD assessment via phone call analysis. Features automated alerts and medical reports.
+
+---
+
+Longer Description (for README or repository description):
+
+A comprehensive multimodal mental health screening application that analyzes 2-minute phone calls to assess depression (PHQ-9), anxiety, and PTSD risk levels. Uses Google's MedASR for speech-to-text transcription and MedGemma for medical text analysis. Features automated alerting for high-risk cases (including suicide risk detection) and generates medical reports for clinician review. Designed for military mental health screening with database storage and REST API support.
+
+---
+
+Tags/Topics (for GitHub topics):
+
+mental-health, medgemma, medasr, phq9, ptsd, anxiety, medical-ai, healthcare, depression-screening, speech-recognition, multimodal-analysis, python, transformers, machine-learning, medical-nlp

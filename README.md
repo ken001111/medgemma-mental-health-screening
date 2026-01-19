@@ -1,6 +1,6 @@
 # Mental Health Screening Application for Soldiers
 
-A comprehensive multimodal mental health screening system that analyzes phone calls to assess depression (PHQ-9), anxiety, and PTSD risk levels.
+A comprehensive multimodal mental health screening system that analyzes 2-minute phone calls using Google's MedASR (speech recognition) and MedGemma (medical AI) to assess depression (PHQ-9), anxiety, and PTSD risk levels. Features automated alerting for high-risk cases and medical report generation for clinician review.
 
 ## Features
 
