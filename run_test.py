@@ -3,6 +3,31 @@
 import os
 import sys
 from datetime import datetime
+
+# ---- Environment sanity check (common macOS/zsh issue) ----
+# Some shells alias `python` to a system/Homebrew python, which overrides venv activation.
+# If that happens, imports like torch will fail even though they are installed in .venv.
+def _ensure_running_inside_venv() -> None:
+    base_prefix = getattr(sys, "base_prefix", sys.prefix)
+    in_venv = base_prefix != sys.prefix
+    if in_venv:
+        return
+
+    print("✗ Not running inside the virtual environment.")
+    print(f"  sys.executable: {sys.executable}")
+    print("")
+    print("Fix:")
+    print('  source .venv/bin/activate')
+    print('  python run_test.py /path/to/your_audio.wav')
+    print("")
+    print("If your shell aliases `python`, run explicitly:")
+    print('  .venv/bin/python run_test.py /path/to/your_audio.wav')
+    sys.exit(1)
+
+
+_ensure_running_inside_venv()
+
+# Import after venv check, so missing deps show up correctly
 from main_app import MentalHealthScreeningApp
 
 def main():
