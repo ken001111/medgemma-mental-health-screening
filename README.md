@@ -30,6 +30,14 @@ main_app.py          # Main application entry point
 └── config.py                # Configuration settings
 ```
 
+## Quick start (how to run)
+
+- **One-off test:** Put your recording (MP3/WAV/MP4) in the repo, then: `source .venv/bin/activate` and `python run_test.py your_file.mp3`
+- **In code:** Import `MentalHealthScreeningApp` from `main_app` and call `process_call(call_path=..., soldier_id=...)`
+- **REST API:** Run `python api_handler.py` and POST to `http://localhost:5000/process_call`
+
+See **[RUN.md](RUN.md)** for full run options, prerequisites, and quick reference.
+
 ## Installation
 
 1. Install dependencies:
@@ -164,9 +172,7 @@ MEDGEMMA/
 ### Model Selection Strategy
 - **Default**: MedGemma 4B (faster, lower resource requirements)
 - **Critical Cases**: Automatically upgrades to MedGemma 27B for high-risk cases
-- **Configuration**: See `config.py` for `MEDGEMMA_MODEL_ID` and `USE_MEDGEMMA_27B_FOR_CRITICAL`
-
-See `MEDGEMMA_COMPARISON.md` for detailed comparison of 4B vs 27B models.
+- **Configuration**: See `config.py` for `MEDGEMMA_MODEL_ID` and `USE_MEDGEMMA_27B_FOR_CRITICAL`.
 
 ## Notes
 
