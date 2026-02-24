@@ -9,6 +9,7 @@ numpy>=1.24.0
 librosa>=0.10.0
 flask>=2.3.0
 werkzeug>=2.3.0
+google-generativeai>=0.8.0
 # Note: MedGemma models are available via HuggingFace
 # google/medgemma-2-4b-it (4B instruction-tuned)
 # google/medgemma-2-27b-it (27B instruction-tuned)

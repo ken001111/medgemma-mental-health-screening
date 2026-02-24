@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Soldier Mental Health Screening</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f2f2f7;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .phone-frame {
+      width: 100%;
+      max-width: 390px;
+      min-height: 100vh;
+      background: #fff;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px #ccc;
+    }
+    .screen {
+      display: none;
+      min-height: 100vh;
+      flex-direction: column;
+      padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top));
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    .screen.active { display: flex; }
+    .header {
+      font-size: 22px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .record-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .record-btn {
+      width: 120px;
+      height: 120px;
+      border-radius: 60px;
+      border: 4px solid #ff3b30;
+      background: #ff3b30;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .record-btn:active { transform: scale(0.96); }
+    .record-btn.recording {
+      background: #fff;
+      color: #ff3b30;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .record-label { margin-top: 16px; font-size: 17px; color: #000; }
+    .record-hint { margin-top: 8px; font-size: 13px; color: #8e8e93; }
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary { background: #007aff; color: #fff; }
+    .btn-primary:disabled { background: #8e8e93; cursor: not-allowed; }
+    .btn-secondary { background: #e5e5ea; color: #000; }
+    .list-group { margin-bottom: 24px; }
+    .list-group-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #8e8e93;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 0;
+    }
+    .list-row {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .list-row .left { flex: 1; min-width: 0; }
+    .list-row .time { font-size: 17px; font-weight: 600; color: #000; }
+    .list-row .meta { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+    .severity {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .severity.low { background: #d1f4e0; color: #0a7b42; }
+    .severity.moderate { background: #fff3cd; color: #856404; }
+    .severity.high { background: #f8d7da; color: #721c24; }
+    .send-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      background: #007aff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    .send-btn:disabled { background: #c7c7cc; cursor: default; }
+    .sent-badge { font-size: 12px; color: #34c759; font-weight: 600; }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      max-width: 320px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .modal h3 { margin: 0 0 12px; font-size: 17px; }
+    .modal p { margin: 0 0 20px; font-size: 15px; color: #8e8e93; line-height: 1.4; }
+    .modal-actions { display: flex; gap: 12px; }
+    .modal-actions .btn { flex: 1; }
+    .toast {
+      position: fixed;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #000;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 15px;
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      z-index: 1001;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #8e8e93;
+      font-size: 15px;
+    }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e5ea; border-top-color: #007aff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .result-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      margin: 16px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    .result-card .severity { margin: 12px 0; }
+    .chat-container { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 15px; line-height: 1.4; }
+    .chat-msg.user { align-self: flex-end; background: #007aff; color: #fff; }
+    .chat-msg.assistant { align-self: flex-start; background: #e5e5ea; color: #000; }
+    .chat-input-row { display: flex; gap: 8px; padding: 12px 0; border-top: 1px solid #e5e5ea; }
+    .chat-input { flex: 1; padding: 12px 16px; border: 1px solid #c7c7cc; border-radius: 22px; font-size: 16px; }
+    .chat-send { padding: 12px 20px; border-radius: 22px; font-size: 16px; font-weight: 600; background: #007aff; color: #fff; border: none; cursor: pointer; }
+    .chat-send:disabled { background: #c7c7cc; cursor: default; }
+    .chat-subtitle { font-size: 13px; color: #8e8e93; margin-top: 4px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+    <!-- Screen 1: Record -->
+    <div id="screen-record" class="screen active">
+      <div class="header">Soldier Mental Health Screening</div>
+      <div class="record-section">
+        <button type="button" class="record-btn" id="recordBtn" aria-label="Record">Record</button>
+        <div class="record-label" id="recordLabel">Tap to start interview</div>
+        <div class="record-hint">For soldiers • ~2 min • Speak clearly</div>
+        <div class="nav-row" style="margin-top: 32px;">
+          <button type="button" class="btn btn-secondary" id="btnViewHistory">View history</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen: Result after processing -->
+    <div id="screen-result" class="screen">
+      <div class="header">Screening complete</div>
+      <div class="result-card">
+        <div class="record-label">Soldier Mental Health Screening</div>
+        <div>Severity: <span id="resultSeverity" class="severity low">—</span></div>
+        <div class="nav-row">
+          <button type="button" class="btn btn-primary" id="btnChatResults">Chat about your results</button>
+        </div>
+        <div class="nav-row">
+          <button type="button" class="btn btn-secondary" id="btnResultViewHistory">View history</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen: Chat with Google AI -->
+    <div id="screen-chat" class="screen">
+      <div class="header">Chat about your results</div>
+      <div class="chat-subtitle">Powered by Google AI • For soldiers</div>
+      <div class="nav-row" style="margin-bottom: 8px;">
+        <button type="button" class="btn btn-secondary" id="btnChatBack">Back to database</button>
+      </div>
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-row">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about your results..." autocomplete="off" />
+          <button type="button" class="chat-send" id="chatSend">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 2: Recordings by day -->
+    <div id="screen-list" class="screen">
+      <div class="header">Your Recordings</div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-secondary" id="btnBackToList">Back</button>
+      </div>
+      <div id="listContainer">
+        <div class="empty-state" id="emptyState">No recordings yet. Record a soldier screening interview from the home screen.</div>
+        <div id="listByDay" style="display: none;"></div>
+      </div>
+    </div>
+
+    <!-- Consent modal -->
+    <div class="modal-overlay" id="consentModal">
+      <div class="modal">
+        <h3>Send to clinician?</h3>
+        <p>This report will be sent to the clinician for deeper review. Do you consent to sharing this screening result? (This app is for soldiers' mental health screening.)</p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="consentCancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="consentSend">I consent, send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sent confirmation toast -->
+    <div class="toast" id="toast">Report sent to clinician for deeper review.</div>
+  </div>
+
+  <script>
+    const API = "/api";
+    let mediaRecorder = null;
+    let recordingChunks = [];
+    let pendingSendCallId = null;
+    let lastProcessedCallId = null;
+    let lastProcessedSeverity = "low";
+    let chatCallId = null;
+    let chatMessages = [];
+
+    const screenRecord = document.getElementById("screen-record");
+    const screenList = document.getElementById("screen-list");
+    const screenResult = document.getElementById("screen-result");
+    const screenChat = document.getElementById("screen-chat");
+    const recordBtn = document.getElementById("recordBtn");
+    const recordLabel = document.getElementById("recordLabel");
+    const listByDay = document.getElementById("listByDay");
+    const emptyState = document.getElementById("emptyState");
+    const consentModal = document.getElementById("consentModal");
+    const toast = document.getElementById("toast");
+
+    function showScreen(el) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      if (el) el.classList.add("active");
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg || "Report sent to clinician for deeper review.";
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2500);
+    }
+
+    recordBtn.addEventListener("click", async () => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordingChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => e.data.size && recordingChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(t => t.stop());
+          recordBtn.classList.remove("recording");
+          recordLabel.textContent = "Processing…";
+          recordBtn.disabled = true;
+          try {
+            const blob = new Blob(recordingChunks, { type: "audio/webm" });
+            const form = new FormData();
+            form.append("file", blob, "recording.webm");
+            form.append("soldier_id", "DEMO_USER");
+            const r = await fetch(API + "/process_recording", { method: "POST", body: form });
+            const data = await r.json();
+            if (data.success) {
+              lastProcessedCallId = data.call_id;
+              lastProcessedSeverity = data.severity || "low";
+              document.getElementById("resultSeverity").textContent = lastProcessedSeverity;
+              document.getElementById("resultSeverity").className = "severity " + lastProcessedSeverity;
+              recordLabel.textContent = "Done.";
+              showScreen(screenResult);
+            } else {
+              recordLabel.textContent = "Error: " + (data.error || "Processing failed");
+            }
+          } catch (e) {
+            recordLabel.textContent = "Error: " + e.message;
+          }
+          recordBtn.disabled = false;
+        };
+        mediaRecorder.start();
+        recordBtn.classList.add("recording");
+        recordLabel.textContent = "Recording… Tap again to stop";
+      } catch (e) {
+        recordLabel.textContent = "Microphone access needed.";
+      }
+    });
+
+    document.getElementById("btnViewHistory").addEventListener("click", () => {
+      loadRecordings();
+      showScreen(screenList);
+    });
+
+    document.getElementById("btnResultViewHistory").addEventListener("click", () => {
+      loadRecordings();
+      showScreen(screenList);
+    });
+
+    document.getElementById("btnChatResults").addEventListener("click", () => {
+      chatCallId = lastProcessedCallId;
+      openChat();
+    });
+
+    document.getElementById("btnChatBack").addEventListener("click", () => {
+      showScreen(screenList);
+    });
+
+    function openChat(callId) {
+      if (callId != null) chatCallId = callId;
+      else if (chatCallId == null) chatCallId = lastProcessedCallId;
+      chatMessages = [
+        { role: "assistant", content: "Your screening is complete. You can ask me about your results or general wellness—I'm here to support you. (Powered by Google AI. I'm not a substitute for professional care.)" }
+      ];
+      renderChatMessages();
+      document.getElementById("chatInput").value = "";
+      showScreen(screenChat);
+    }
+
+    function renderChatMessages() {
+      const el = document.getElementById("chatMessages");
+      el.innerHTML = chatMessages.map(m => {
+        const cls = m.role === "user" ? "chat-msg user" : "chat-msg assistant";
+        return `<div class="${cls}">${escapeHtml(m.content)}</div>`;
+      }).join("");
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.getElementById("chatSend").addEventListener("click", sendChatMessage);
+    document.getElementById("chatInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); sendChatMessage(); }
+    });
+
+    async function sendChatMessage() {
+      const input = document.getElementById("chatInput");
+      const text = (input.value || "").trim();
+      if (!text) return;
+      chatMessages.push({ role: "user", content: text });
+      input.value = "";
+      renderChatMessages();
+      const sendBtn = document.getElementById("chatSend");
+      sendBtn.disabled = true;
+      try {
+        const r = await fetch(API + "/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: chatMessages, call_id: chatCallId })
+        });
+        const data = await r.json();
+        const reply = data.reply || data.error || "No response.";
+        chatMessages.push({ role: "assistant", content: reply });
+        renderChatMessages();
+      } catch (e) {
+        chatMessages.push({ role: "assistant", content: "Error: " + e.message });
+        renderChatMessages();
+      }
+      sendBtn.disabled = false;
+    }
+
+    document.getElementById("btnBackToList").addEventListener("click", () => showScreen(screenRecord));
+
+    function loadRecordings() {
+      fetch(API + "/recordings")
+        .then(r => r.json())
+        .then(data => {
+          const byDay = data.by_day || {};
+          const days = data.days || [];
+          if (days.length === 0) {
+            emptyState.style.display = "block";
+            listByDay.style.display = "none";
+            return;
+          }
+          emptyState.style.display = "none";
+          listByDay.style.display = "block";
+          listByDay.innerHTML = days.map(day => {
+            const rows = (byDay[day] || []).map(rec => {
+            const time = rec.time || "";
+            const severity = (rec.severity || "low");
+            const sent = rec.sent_to_clinician;
+            return `
+              <div class="list-row" data-call-id="${rec.call_id}">
+                <div class="left">
+                  <div class="time">${time}</div>
+                  <div class="meta">
+                    <span class="severity ${severity}">${severity}</span>
+                    ${rec.phq9_score != null ? " PHQ-9 " + rec.phq9_score : ""}
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <button type="button" class="chat-row-btn" data-call-id="${rec.call_id}" style="padding:6px 12px; border-radius:8px; font-size:13px; font-weight:600; background:#34c759; color:#fff; border:none; cursor:pointer;">Chat</button>
+                  ${sent
+                    ? '<span class="sent-badge">Sent</span>'
+                    : `<button type="button" class="send-btn" data-call-id="${rec.call_id}">Send to clinician</button>`}
+                </div>
+              </div>`;
+            }).join("");
+            return `<div class="list-group"><div class="list-group-title">${day}</div>${rows}</div>`;
+          }).join("");
+          listByDay.querySelectorAll(".send-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+              pendingSendCallId = btn.dataset.callId;
+              consentModal.classList.add("active");
+            });
+          });
+          listByDay.querySelectorAll(".chat-row-btn").forEach(btn => {
+            btn.addEventListener("click", () => openChat(btn.dataset.callId));
+          });
+        })
+        .catch(() => {
+          emptyState.textContent = "Could not load recordings.";
+          emptyState.style.display = "block";
+          listByDay.style.display = "none";
+        });
+    }
+
+    document.getElementById("consentCancel").addEventListener("click", () => {
+      consentModal.classList.remove("active");
+      pendingSendCallId = null;
+    });
+
+    document.getElementById("consentSend").addEventListener("click", async () => {
+      if (!pendingSendCallId) return;
+      try {
+        const r = await fetch(API + "/send_to_clinician/" + pendingSendCallId, { method: "POST" });
+        const data = await r.json();
+        consentModal.classList.remove("active");
+        if (data.success) {
+          showToast(data.message || "Report sent to clinician for deeper review.");
+          loadRecordings();
+        } else {
+          showToast("Error: " + (data.error || "Send failed"));
+        }
+      } catch (e) {
+        showToast("Error: " + e.message);
+      }
+      pendingSendCallId = null;
+    });
+  </script>
+</body>
+</html>

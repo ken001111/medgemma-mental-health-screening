@@ -6,7 +6,14 @@
 - **ffmpeg** installed (`brew install ffmpeg` on macOS).
 - **Virtual environment**: use the existing `.venv` in the repo root.
 - **Dependencies**: `pip install -r requirements.txt` (with venv activated).
-- **First run**: MedASR and MedGemma models download from HuggingFace (~8–9GB total); allow 10–30 minutes and a stable internet connection.
+- **First run**: MedASR and MedGemma models download from HuggingFace (~8–9GB total); allow 10–30 minutes and a stable internet connection. The `google/medasr` model is gated: log in and accept the model terms at https://huggingface.co/google/medasr, then run:
+
+```bash
+source .venv/bin/activate
+hf auth login
+```
+
+(Paste your token from https://huggingface.co/settings/tokens. If `hf` is not found, run: `.venv/bin/hf auth login` or `python -m huggingface_hub.cli.hf auth login`.)
 
 Ensure you are actually using the venv when you run `python`. If your shell aliases `python`, use:
 
@@ -104,9 +111,14 @@ curl -X POST -F "file=@/path/to/recording.mp3" -F "soldier_id=SOLDIER_001" http:
 
 ---
 
-## Where to put the MP3
+## Where to put the MP3 / Record your own
 
-- **Easiest:** Put the file in the repo root and run:
+- **Record with the included script:** From repo root (venv activated), run:
+  `python record_sample.py`
+  This records 2 minutes from your microphone and saves `my_recording.mp3`. Then run:
+  `python run_test.py my_recording.mp3`
+  Options: `--duration 60` (1 min), `--output name.mp3`, `--format wav`.
+- **Easiest (existing file):** Put the file in the repo root and run:
   `python run_test.py your_file.mp3`
 - **Any path:** Use an absolute or relative path:
   `python run_test.py /path/to/your_file.mp3`
@@ -159,3 +171,21 @@ flowchart LR
 | Use in code | Import `MentalHealthScreeningApp` from `main_app`, call `process_call(...)` |
 | Serve HTTP API | `python api_handler.py`, then POST to `http://localhost:5000/process_call` |
 | Train classifiers (optional) | `python train_classifiers.py --data train.csv --train_all` (see [README](README.md) / [train_classifiers.py](train_classifiers.py)) |
+
+## Demo GUI (iPhone-style)
+
+For a demo video, run the web-based iPhone-style GUI:
+
+```bash
+source .venv/bin/activate
+python gui_app.py
+```
+
+Then open **http://127.0.0.1:5001** in a browser. Use a narrow window or DevTools device toolbar (e.g. iPhone 14) for the best look.
+
+- **Screen 1:** Soldier Mental Health Screening — record button; tap to start/stop; audio is uploaded and processed.
+- **After processing:** Result screen with severity and **Chat about your results** (Google AI) or **View history**.
+- **Chat:** Powered by Google Gemini. Set `GEMINI_API_KEY` to enable (get a key at [Google AI Studio](https://aistudio.google.com/apikey)).
+- **Screen 2:** Your recordings by day with severity and per row: **Chat** and “Send to clinician” buttons.
+- **Consent:** Tapping “Send to clinician” opens a popup asking for consent; confirm to mark as sent.
+- **Confirmation:** A toast confirms “Report sent to clinician for deeper review.”

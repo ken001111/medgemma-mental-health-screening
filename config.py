@@ -48,6 +48,11 @@ DB_TABLE_SCORES = "scores"
 DB_TABLE_REPORTS = "reports"
 DB_TABLE_ALERTS = "alerts"
 
+# Gemini API for post-screening chat (optional; set GEMINI_API_KEY env var)
+# Tip: prefer using the exact model ID returned by list_models(), e.g. "models/gemini-flash-latest"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "models/gemini-flash-latest")
+
 # Alert Recipients (to be configured with actual contact info)
 ALERT_EMAILS = [
     "medical_officer@military.mil",

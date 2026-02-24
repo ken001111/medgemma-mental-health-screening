@@ -83,6 +83,15 @@ class ScreeningDatabase:
             )
         """)
         
+        # Clinician sends (for GUI: track when report was sent to clinician)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS clinician_sends (
+                call_id TEXT PRIMARY KEY,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (call_id) REFERENCES calls(call_id)
+            )
+        """)
+        
         conn.commit()
         conn.close()
     
@@ -164,6 +173,123 @@ class ScreeningDatabase:
         conn.close()
         
         return [dict(row) for row in rows]
+    
+    def get_recordings_for_gui(self, soldier_id: str = None, limit: int = 50) -> List[Dict]:
+        """Get all recordings with scores and severity, grouped for GUI. Optionally filter by soldier_id."""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        if soldier_id:
+            cursor.execute(f"""
+                SELECT c.call_id, c.soldier_id, c.call_timestamp, c.call_duration, c.transcript,
+                       s.phq9_score, s.anxiety_risk, s.ptsd_risk
+                FROM {DB_TABLE_CALLS} c
+                LEFT JOIN {DB_TABLE_SCORES} s ON c.call_id = s.call_id
+                WHERE c.soldier_id = ?
+                ORDER BY c.call_timestamp DESC
+                LIMIT ?
+            """, (soldier_id, limit))
+        else:
+            cursor.execute(f"""
+                SELECT c.call_id, c.soldier_id, c.call_timestamp, c.call_duration, c.transcript,
+                       s.phq9_score, s.anxiety_risk, s.ptsd_risk
+                FROM {DB_TABLE_CALLS} c
+                LEFT JOIN {DB_TABLE_SCORES} s ON c.call_id = s.call_id
+                ORDER BY c.call_timestamp DESC
+                LIMIT ?
+            """, (limit,))
+        
+        rows = cursor.fetchall()
+        
+        # Check which calls have been sent to clinician
+        cursor.execute("SELECT call_id FROM clinician_sends")
+        sent_ids = {r[0] for r in cursor.fetchall()}
+        conn.close()
+        
+        result = []
+        for row in rows:
+            d = dict(row)
+            phq9 = d.get("phq9_score")
+            anxiety = d.get("anxiety_risk")
+            ptsd = d.get("ptsd_risk")
+            severity = "low"
+            if phq9 is not None and phq9 >= 15:
+                severity = "high"
+            elif phq9 is not None and phq9 >= 10:
+                severity = "moderate"
+            if anxiety is not None and anxiety >= 0.8:
+                severity = "high"
+            elif anxiety is not None and anxiety >= 0.6 and severity == "low":
+                severity = "moderate"
+            if ptsd is not None and ptsd >= 0.8:
+                severity = "high"
+            elif ptsd is not None and ptsd >= 0.6 and severity == "low":
+                severity = "moderate"
+            d["severity"] = severity
+            d["sent_to_clinician"] = d["call_id"] in sent_ids
+            result.append(d)
+        
+        return result
+    
+    def get_call_context_for_chat(self, call_id: str) -> Optional[Dict]:
+        """Get report summary and scores for a call (for chat context with Gemini)."""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            SELECT c.call_id, c.transcript,
+                   s.phq9_score, s.anxiety_risk, s.ptsd_risk
+            FROM {DB_TABLE_CALLS} c
+            LEFT JOIN {DB_TABLE_SCORES} s ON c.call_id = s.call_id
+            WHERE c.call_id = ?
+        """, (call_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return None
+        d = dict(row)
+        cursor.execute(f"""
+            SELECT report_content FROM {DB_TABLE_REPORTS}
+            WHERE call_id = ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (call_id,))
+        report_row = cursor.fetchone()
+        conn.close()
+        if report_row:
+            d["report_content"] = report_row[0]
+        else:
+            d["report_content"] = None
+        # Compute severity for context
+        phq9 = d.get("phq9_score")
+        anxiety = d.get("anxiety_risk")
+        ptsd = d.get("ptsd_risk")
+        severity = "low"
+        if phq9 is not None and phq9 >= 15:
+            severity = "high"
+        elif phq9 is not None and phq9 >= 10:
+            severity = "moderate"
+        if anxiety is not None and anxiety >= 0.8:
+            severity = "high"
+        elif anxiety is not None and anxiety >= 0.6 and severity == "low":
+            severity = "moderate"
+        if ptsd is not None and ptsd >= 0.8:
+            severity = "high"
+        elif ptsd is not None and ptsd >= 0.6 and severity == "low":
+            severity = "moderate"
+        d["severity"] = severity
+        return d
+
+    def mark_sent_to_clinician(self, call_id: str):
+        """Mark that this call's report was sent to clinician."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO clinician_sends (call_id) VALUES (?)",
+            (call_id,)
+        )
+        conn.commit()
+        conn.close()
     
     def get_pending_alerts(self) -> List[Dict]:
         """Get all unacknowledged alerts."""

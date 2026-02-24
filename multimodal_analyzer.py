@@ -11,6 +11,11 @@ from config import MEDASR_ID, MEDASR_PROCESSOR_ID, MAX_NEW_TOKENS, SR
 from audio_processor import extract_prosody_features, load_audio
 from medgemma_analyzer import MedGemmaAnalyzer, create_medgemma_analyzer
 
+try:
+    from huggingface_hub import get_token
+except ImportError:
+    get_token = lambda: None
+
 
 class MultimodalAnalyzer:
     """
@@ -35,18 +40,22 @@ class MultimodalAnalyzer:
             self.device = "cpu"
         
         print(f"Loading MedASR model on {self.device}...")
-        self.processor = AutoProcessor.from_pretrained(MEDASR_PROCESSOR_ID)
-        self.asr_config = AutoConfig.from_pretrained(MEDASR_ID)
+        hf_token = get_token()
+        kwargs = {"token": hf_token} if hf_token else {}
+        self.processor = AutoProcessor.from_pretrained(MEDASR_PROCESSOR_ID, **kwargs)
+        self.asr_config = AutoConfig.from_pretrained(MEDASR_ID, **kwargs)
         dtype = torch.float16 if self.device == "cuda" else torch.float32
         if self.asr_config.model_type == "lasr_ctc":
             self.model = AutoModelForCTC.from_pretrained(
                 MEDASR_ID,
                 torch_dtype=dtype,
+                **kwargs,
             )
         else:
             self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
                 MEDASR_ID,
                 torch_dtype=dtype,
+                **kwargs,
             )
         self.model.to(self.device)
         self.model.eval()

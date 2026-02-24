@@ -141,6 +141,12 @@ def main():
         sys.exit(1)
     except Exception as e:
         print(f"\n✗ Error: {e}")
+        err_str = str(e).lower()
+        if "gated" in err_str or "401" in err_str or "medasr" in err_str:
+            print("\nTo use the MedASR model:")
+            print("  1. Log in:  hf auth login   (or .venv/bin/hf auth login)")
+            print("  2. Open https://huggingface.co/google/medasr and click 'Agree and access repository'")
+            print("  3. Run this script again.")
         import traceback
         traceback.print_exc()
         sys.exit(1)
